@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdError,
-    StdResult, Uint128,
+    coins, to_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Order, Reply,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -13,7 +13,8 @@ use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RedemptionResponse, RedemptionsResponse,
 };
 use crate::state::{
-    Redemption, RedemptionState, NFT_CONTRACT, REDEMPTION_DENOM, REDEMPTION_INCREMENT,
+    Redemption, RedemptionState, BONDING_CONTRACT, NFT_CONTRACT, REDEMPTION_DENOM,
+    REDEMPTION_INCREMENT,
 };
 
 // version info for migration info
@@ -90,11 +91,11 @@ pub fn execute_redeem(
 ) -> Result<Response, ContractError> {
     one_coin(&info)?;
     let denom = REDEMPTION_DENOM.load(deps.storage)?;
+    let bonding_contract = BONDING_CONTRACT.load(deps.storage)?;
+
     let amount = must_pay(&info, &denom)?;
     if amount != Uint128::one() {
-        return Err(ContractError::InvalidRedemptionAmount {
-            denom,
-        });
+        return Err(ContractError::InvalidRedemptionAmount { denom });
     }
     let redemption_state = RedemptionState::default();
     let redemption_incr = REDEMPTION_INCREMENT.update(
@@ -115,7 +116,15 @@ pub fn execute_redeem(
         .redemptions
         .save(deps.storage, redemption_incr.to_string(), &redemption)?;
 
+    let wasm_msg = cw_bonding_pool::msg::ExecuteMsg::Dissolve {};
+    let msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: bonding_contract.to_string(),
+        msg: to_binary(&wasm_msg)?,
+        funds: coins(amount.u128(), &denom),
+    });
+
     Ok(Response::new()
+        .add_message(msg)
         .add_attribute("method", "redeem")
         .add_attribute("id", redemption_incr.to_string()))
 }

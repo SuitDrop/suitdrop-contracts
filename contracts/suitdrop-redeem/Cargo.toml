@@ -53,6 +53,7 @@ cw-storage-macro = { version = "1.0.1" }
 cw-utils = { version = "1.0.1" }
 cw721-suit = { workspace = true }
 cw721-base = { workspace = true }
+cw-bonding-pool = { path = "../cw-bonding-pool", features = ["library"] }
 
 [dev-dependencies]
 cw-multi-test = "0.13.2"

@@ -42,3 +42,5 @@ pub const REDEMPTION_INCREMENT: Item<u32> = Item::new("redemption_increment");
 pub const REDEMPTION_DENOM: Item<String> = Item::new("redemption_denom");
 
 pub const NFT_CONTRACT: Item<Addr> = Item::new("nft_contract");
+
+pub const BONDING_CONTRACT: Item<Addr> = Item::new("bonding_contract");

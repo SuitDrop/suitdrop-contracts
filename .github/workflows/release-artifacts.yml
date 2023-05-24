@@ -1,4 +1,8 @@
 name: Release Artifacts
+
+permissions:
+  contents: write
+
 on:
   push:
     tags:
