@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, coins, entry_point, to_binary, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Reply, Response, StdError, StdResult, Uint128,
+    coin, coins, to_binary, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_utils::{must_pay, one_coin};
@@ -107,13 +107,8 @@ pub fn execute_dissolve(
 }
 
 /// Handling contract execution
-#[entry_point]
-pub fn sudo(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: SudoMsg,
-) -> Result<Response, ContractError> {
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     // if the message is not SetActive, ensure that the contract is active
     if !matches!(msg, SudoMsg::SetActive { .. }) && !IS_ACTIVE.load(deps.storage)? {
         return Err(ContractError::Std(StdError::generic_err(
@@ -130,7 +125,6 @@ pub fn sudo(
         } => execute_swap_exact_amount_in(
             deps,
             env,
-            info,
             sender,
             token_in,
             token_out_denom,
@@ -146,14 +140,13 @@ pub fn sudo(
         } => execute_swap_exact_amount_out(
             deps,
             env,
-            info,
             sender,
             token_in_denom,
             token_in_max_amount,
             token_out,
             swap_fee,
         ),
-        SudoMsg::SetActive { is_active } => execute_set_active(deps, env, info, is_active),
+        SudoMsg::SetActive { is_active } => execute_set_active(deps, env, is_active),
         // Find matched incoming message variant and execute them with your custom logic.
         //
         // With `Response` type, it is possible to dispatch message to invoke external logic.
@@ -164,7 +157,6 @@ pub fn sudo(
 pub fn execute_set_active(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     is_active: bool,
 ) -> Result<Response, ContractError> {
     IS_ACTIVE.save(deps.storage, &is_active)?;
@@ -181,7 +173,6 @@ pub fn execute_set_active(
 pub fn execute_swap_exact_amount_in(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     sender: String,
     token_in: Coin,
     token_out_denom: String,
@@ -217,7 +208,6 @@ pub fn execute_swap_exact_amount_in(
 pub fn execute_swap_exact_amount_out(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     sender: String,
     token_in_denom: String,
     token_in_max_amount: Uint128,
