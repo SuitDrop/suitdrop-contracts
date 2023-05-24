@@ -1,0 +1,18 @@
+[workspace]
+
+members = ['contracts/*']
+
+[workspace.dependencies]
+cw721-suit = { path = './contracts/cw721-suit' }
+cw721-base = { version = "0.17.0", features = ["library"] }
+
+[profile.release]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+panic = 'abort'
+rpath = false
