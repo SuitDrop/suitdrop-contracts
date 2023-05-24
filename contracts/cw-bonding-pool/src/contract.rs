@@ -1,15 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, coins, to_binary, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, Uint128,
+    coin, coins, entry_point, to_binary, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Reply, Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_utils::{must_pay, one_coin};
 
-use crate::calc::{
-    calc_buy_exact_out, calc_swap_exact_amount_in, calc_swap_exact_amount_out,
-};
+use crate::calc::{calc_buy_exact_out, calc_swap_exact_amount_in, calc_swap_exact_amount_out};
 use crate::error::ContractError;
 use crate::msg::{
     CalcInAmtGivenOutResponse, CalcOutAmtGivenInResponse, ExecuteMsg, GetSwapFeeResponse,
@@ -109,7 +107,7 @@ pub fn execute_dissolve(
 }
 
 /// Handling contract execution
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn sudo(
     deps: DepsMut,
     env: Env,
@@ -204,9 +202,7 @@ pub fn execute_swap_exact_amount_in(
         amount: coins(token_out_amount.u128(), token_out_denom),
     };
 
-    let swap_result = SwapExactAmountInResponseData {
-        token_out_amount,
-    };
+    let swap_result = SwapExactAmountInResponseData { token_out_amount };
 
     Ok(Response::new()
         .add_attribute("method", "swap_exact_amount_in")
@@ -243,9 +239,7 @@ pub fn execute_swap_exact_amount_out(
         amount: vec![token_out],
     };
 
-    let swap_result = SwapExactAmountOutResponseData {
-        token_in_amount,
-    };
+    let swap_result = SwapExactAmountOutResponseData { token_in_amount };
 
     Ok(Response::new()
         .add_attribute("method", "swap_exact_amount_out")
