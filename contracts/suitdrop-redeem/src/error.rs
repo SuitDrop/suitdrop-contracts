@@ -19,4 +19,11 @@ pub enum ContractError {
 
     #[error("Only one ${denom:?} may be redeemed at a time")]
     InvalidRedemptionAmount { denom: String },
+
+    // parse reply error
+    #[error("Parse reply error")]
+    ParseReplyError(#[from] cw_utils::ParseReplyError),
+
+    #[error("Invalid reply id")]
+    InvalidReplyId {},
 }

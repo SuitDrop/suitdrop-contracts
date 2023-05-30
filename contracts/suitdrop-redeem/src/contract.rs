@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
-use cw_utils::{must_pay, one_coin};
+use cw_utils::{must_pay, one_coin, parse_reply_instantiate_data};
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -21,6 +21,8 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:suitdrop-redeem";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+const INSTANTIATE_NFT_REPLY_ID: u64 = 1;
+
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -33,24 +35,22 @@ pub fn instantiate(
 
     REDEMPTION_DENOM.save(deps.storage, &msg.redemption_denom)?;
 
-    let nft_addr_verified = deps.api.addr_validate(&msg.nft_contract_address)?;
-    NFT_CONTRACT.save(deps.storage, &nft_addr_verified)?;
-
-    let cw721_base::MinterResponse { minter } = deps
-        .querier
-        .query_wasm_smart(nft_addr_verified, &cw721_suit::msg::QueryMsg::Minter {})?;
-
-    if let Some(minter) = minter {
-        if minter != env.contract.address {
-            return Err(ContractError::Unauthorized {});
-        }
-    } else {
-        return Err(ContractError::Unauthorized {});
-    }
+    let wasm_msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Instantiate {
+        admin: Some(env.contract.address.to_string()),
+        code_id: msg.nft_code_id.u64(),
+        msg: to_binary(&cw721_suit::msg::InstantiateMsg {
+            name: msg.nft_name,
+            symbol: msg.nft_symbol.clone(),
+            minter: env.contract.address.to_string(),
+        })?,
+        funds: vec![],
+        label: format!("SUITDROP-CW721-{}", msg.nft_symbol),
+    });
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
     Ok(Response::new()
+        .add_message(wasm_msg)
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
@@ -187,9 +187,26 @@ pub fn query_redemption(
 /// Handling submessage reply.
 /// For more info on submessage and reply, see https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#submessages
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    // With `Response` type, it is still possible to dispatch message to invoke external logic.
-    // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.id {
+        INSTANTIATE_NFT_REPLY_ID => {
+            let parsed = parse_reply_instantiate_data(msg)?;
+            let nft_addr_verified = deps.api.addr_validate(parsed.contract_address.as_str())?;
+            let cw721_base::MinterResponse { minter } = deps.querier.query_wasm_smart(
+                nft_addr_verified.clone(),
+                &cw721_suit::msg::QueryMsg::Minter {},
+            )?;
 
-    Ok(Response::new())
+            if let Some(minter) = minter {
+                if minter != env.contract.address.to_string() {
+                    return Err(ContractError::Unauthorized {});
+                }
+            } else {
+                return Err(ContractError::Unauthorized {});
+            }
+            NFT_CONTRACT.save(deps.storage, &nft_addr_verified)?;
+            Ok(Response::new().add_attribute("method", "instantiate_nft"))
+        }
+        _ => Err(ContractError::InvalidReplyId {}),
+    }
 }

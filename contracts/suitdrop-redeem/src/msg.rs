@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint64;
 
 use crate::state::Redemption;
 
@@ -6,7 +7,9 @@ use crate::state::Redemption;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub redemption_denom: String,
-    pub nft_contract_address: String,
+    pub nft_code_id: Uint64,
+    pub nft_name: String,
+    pub nft_symbol: String,
 }
 
 /// Message type for `execute` entry_point

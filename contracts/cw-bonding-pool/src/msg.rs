@@ -3,10 +3,9 @@ use cosmwasm_std::{Coin, Decimal, Uint128};
 
 use crate::curves::{decimal, Constant, Curve, DecimalPlaces, Linear, SquareRoot};
 
-
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub supply_denom: String,
+    pub supply_subdenom: String,
     /// number of decimal places of the supply token, needed for proper curve math.
     /// If it is eg. BTC, where a balance of 10^8 means 1 BTC, then use 8 here.
     pub supply_decimals: u8,
@@ -30,6 +29,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Dissolve {},
+    RegisterTokenFactorySupplyDenom { subdenom: String },
 }
 
 #[cw_serde]

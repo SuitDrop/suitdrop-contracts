@@ -1,20 +1,26 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, coins, to_binary, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, Uint128,
+    coin, coins, ensure_eq, to_binary, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::{must_pay, one_coin};
 
 use crate::calc::{calc_buy_exact_out, calc_swap_exact_amount_in, calc_swap_exact_amount_out};
+use crate::curves::DecimalPlaces;
 use crate::error::ContractError;
+use crate::helpers::mint_or_send;
 use crate::msg::{
     CalcInAmtGivenOutResponse, CalcOutAmtGivenInResponse, ExecuteMsg, GetSwapFeeResponse,
     GetTotalPoolLiquidityResponse, InstantiateMsg, IsActiveResponse, MigrateMsg, QueryMsg,
     SpotPriceResponse, SudoMsg, SwapExactAmountInResponseData, SwapExactAmountOutResponseData,
 };
-use crate::state::{CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE};
+use crate::state::{CurveState, CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgMint};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::{
+    QueryDenomsFromCreatorResponse, TokenfactoryQuerier,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-bonding-pool";
@@ -24,15 +30,42 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let supply_denom = format!(
+        "factory/{}/{}",
+        env.contract.address.to_string(),
+        msg.supply_subdenom
+    );
+    let places = DecimalPlaces::new(msg.supply_decimals, msg.reserve_decimals);
+    let supply = CurveState::new(msg.reserve_denom, supply_denom, places);
+
+    CURVE_STATE.save(deps.storage, &supply)?;
+    CURVE_TYPE.save(deps.storage, &msg.curve_type)?;
+
+    let msg_create_denom: CosmosMsg = MsgCreateDenom {
+        sender: env.contract.address.to_string(),
+        subdenom: msg.supply_subdenom.clone(),
+    }
+    .into();
+
+    let register_denom_msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_binary(&ExecuteMsg::RegisterTokenFactorySupplyDenom {
+            subdenom: msg.supply_subdenom,
+        })?,
+        funds: vec![],
+    });
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
     Ok(Response::new()
+        .add_message(msg_create_denom)
+        .add_message(register_denom_msg)
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
@@ -61,6 +94,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Dissolve { .. } => execute_dissolve(deps, env, info),
+        ExecuteMsg::RegisterTokenFactorySupplyDenom { subdenom } => {
+            execute_register_token_factory_denom(deps, env, info, subdenom)
+        }
     }
 }
 
@@ -104,6 +140,51 @@ pub fn execute_dissolve(
         .add_attribute("dissolved", paid)
         .add_attribute("distributed", dissolved_reserve_cost)
         .add_messages(messages))
+}
+
+pub fn execute_register_token_factory_denom(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    subdenom: String,
+) -> Result<Response, ContractError> {
+    ensure_eq!(
+        info.sender,
+        env.contract.address,
+        ContractError::Unauthorized {}
+    );
+    let token_factory_querier = TokenfactoryQuerier::new(&deps.querier);
+    let query_denoms_from_creator_response: QueryDenomsFromCreatorResponse = token_factory_querier
+        .denoms_from_creator(env.contract.address.to_string())
+        .map_err(|e| StdError::generic_err("failed to load denom"))?;
+
+    // rust iter method to return first matching element: in a vec of strings, find the first string that ends with "/subdenom"
+    // `myvec.to_iter().
+    let mut created_denom: String = query_denoms_from_creator_response
+        .denoms
+        .into_iter()
+        .find(|denom| denom.ends_with(format!("/{}", subdenom).as_str()))
+        .ok_or(ContractError::TokenFactoryDenomNotFound)?;
+
+    let curve_state = CURVE_STATE.load(deps.storage)?;
+    let dissolved_curve_state = DISSOLVED_CURVE_STATE.load(deps.storage)?;
+
+    ensure_eq!(
+        curve_state.supply_denom,
+        created_denom.clone(),
+        ContractError::TokenFactoryDenomNotFound
+    );
+
+    ensure_eq!(
+        dissolved_curve_state.supply_denom,
+        created_denom.clone(),
+        ContractError::TokenFactoryDenomNotFound
+    );
+
+    Ok(Response::new()
+        .add_attribute("method", "register_token_factory_supply_denom")
+        .add_attribute("owner", info.sender)
+        .add_attribute("subdenom", subdenom))
 }
 
 /// Handling contract execution
@@ -172,7 +253,7 @@ pub fn execute_set_active(
 /// is not received.
 pub fn execute_swap_exact_amount_in(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     sender: String,
     token_in: Coin,
     token_out_denom: String,
@@ -188,16 +269,21 @@ pub fn execute_swap_exact_amount_in(
         )));
     }
 
-    let send_token_out_to_sender_msg = BankMsg::Send {
-        to_address: sender,
-        amount: coins(token_out_amount.u128(), token_out_denom),
-    };
+    let curve = CURVE_STATE.load(deps.storage)?;
+
+    let send_msg = mint_or_send(
+        curve.supply_denom,
+        token_out_denom,
+        token_out_amount,
+        sender,
+        env.contract.address.to_string(),
+    );
 
     let swap_result = SwapExactAmountInResponseData { token_out_amount };
 
     Ok(Response::new()
         .add_attribute("method", "swap_exact_amount_in")
-        .add_message(send_token_out_to_sender_msg)
+        .add_message(send_msg)
         .set_data(to_binary(&swap_result)?))
 }
 
