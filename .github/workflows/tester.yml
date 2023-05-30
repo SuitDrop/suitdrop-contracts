@@ -5,12 +5,14 @@ on:
     paths:
       - "contracts/**"
       - "tests/**"
+      - ".github/**"
     branches:
       - main
   pull_request:
     paths:
       - "contracts/**"
       - "tests/**"
+      - ".github/**"
     branches:
       - main
 
