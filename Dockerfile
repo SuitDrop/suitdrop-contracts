@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Build the project, including tests
-RUN cargo build --verbose --all-targets
+RUN cargo wasm
 
 # The command to run when the container starts
 CMD ["cargo", "all-test"]

@@ -40,7 +40,7 @@ jobs:
         with:
           toolchain: stable
       - run: cargo fetch --verbose
-      - run: cargo build
+      - run: cargo wasm
       - run: cargo test --verbose --all
 
   coverage:
