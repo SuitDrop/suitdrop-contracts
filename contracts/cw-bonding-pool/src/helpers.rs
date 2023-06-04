@@ -102,7 +102,7 @@ pub mod tests {
             MsgMint {
                 amount: Some(coin(1000000u128, "uosmo").into()),
                 mint_to_address: sender.clone(),
-                sender: sender,
+                sender,
             }
             .into()
         );
