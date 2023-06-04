@@ -30,3 +30,5 @@ osmosis-bonding
 .env
 
 osmosis
+
+.DS_Store

@@ -17,7 +17,7 @@ use crate::msg::{
     SpotPriceResponse, SudoMsg, SwapExactAmountInResponseData, SwapExactAmountOutResponseData,
 };
 use crate::state::{CurveState, CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE};
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{
     QueryDenomsFromCreatorResponse, TokenfactoryQuerier,
 };
