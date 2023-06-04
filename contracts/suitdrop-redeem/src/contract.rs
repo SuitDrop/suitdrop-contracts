@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     coins, to_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Order, Reply,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    Response, StdError, StdResult, SubMsg, Uint64, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -10,11 +10,12 @@ use cw_utils::{must_pay, one_coin, parse_reply_instantiate_data};
 
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RedemptionResponse, RedemptionsResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RedemptionResponse,
+    RedemptionsResponse,
 };
 use crate::state::{
-    Redemption, RedemptionState, BONDING_CONTRACT, NFT_CONTRACT, REDEMPTION_DENOM,
-    REDEMPTION_INCREMENT,
+    Redemption, RedemptionState, BONDING_CONTRACT, COST_PER_UNIT, NFT_CONTRACT,
+    NFT_RECEIPT_TOKEN_URI, REDEMPTION_DENOM, REDEMPTION_INCREMENT,
 };
 
 // version info for migration info
@@ -33,7 +34,12 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    let checked_bonding_contract_addr = deps.api.addr_validate(&msg.bonding_contract_addr)?;
     REDEMPTION_DENOM.save(deps.storage, &msg.redemption_denom)?;
+    COST_PER_UNIT.save(deps.storage, &msg.cost_per_unit)?;
+    BONDING_CONTRACT.save(deps.storage, &checked_bonding_contract_addr)?;
+    NFT_RECEIPT_TOKEN_URI.save(deps.storage, &msg.nft_receipt_token_uri)?;
+    REDEMPTION_INCREMENT.save(deps.storage, &Uint64::zero())?;
 
     let wasm_msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Instantiate {
         admin: Some(env.contract.address.to_string()),
@@ -47,10 +53,12 @@ pub fn instantiate(
         label: format!("SUITDROP-CW721-{}", msg.nft_symbol),
     });
 
+    let wasm_msg = SubMsg::reply_on_success(wasm_msg, INSTANTIATE_NFT_REPLY_ID);
+
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
     Ok(Response::new()
-        .add_message(wasm_msg)
+        .add_submessage(wasm_msg)
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
@@ -94,15 +102,14 @@ pub fn execute_redeem(
     let bonding_contract = BONDING_CONTRACT.load(deps.storage)?;
 
     let amount = must_pay(&info, &denom)?;
-    if amount != Uint128::one() {
+    if amount != COST_PER_UNIT.load(deps.storage)? {
         return Err(ContractError::InvalidRedemptionAmount { denom });
     }
     let redemption_state = RedemptionState::default();
     let redemption_incr = REDEMPTION_INCREMENT.update(
         deps.storage,
-        |mut redemption_increment| -> Result<u32, ContractError> {
-            redemption_increment += 1;
-            Ok(redemption_increment)
+        |redemption_increment| -> Result<Uint64, ContractError> {
+            Ok(redemption_increment.checked_add(Uint64::one())?)
         },
     )?;
 
@@ -116,15 +123,26 @@ pub fn execute_redeem(
         .redemptions
         .save(deps.storage, redemption_incr.to_string(), &redemption)?;
 
-    let wasm_msg = cw_bonding_pool::msg::ExecuteMsg::Dissolve {};
-    let msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Execute {
+    let dissolve_msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: bonding_contract.to_string(),
-        msg: to_binary(&wasm_msg)?,
+        msg: to_binary(&cw_bonding_pool::msg::ExecuteMsg::Dissolve {})?,
         funds: coins(amount.u128(), &denom),
     });
 
+    let mint_nft_msg: CosmosMsg<Empty> = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: NFT_CONTRACT.load(deps.storage)?.to_string(),
+        msg: to_binary(&cw721_suit::msg::ExecuteMsg::Mint {
+            owner: info.sender.to_string(),
+            token_id: redemption_incr.to_string(),
+            token_uri: Some(NFT_RECEIPT_TOKEN_URI.load(deps.storage)?),
+            extension: None,
+        })?,
+        funds: vec![],
+    });
+
     Ok(Response::new()
-        .add_message(msg)
+        .add_message(dissolve_msg)
+        .add_message(mint_nft_msg)
         .add_attribute("method", "redeem")
         .add_attribute("id", redemption_incr.to_string()))
 }
@@ -137,7 +155,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&query_redemptions(deps, env, start_after, limit)?)
         }
         QueryMsg::Redemption { id, proof } => to_binary(&query_redemption(deps, id, proof)?),
+        QueryMsg::Config {} => to_binary(&query_config(deps)?),
     }
+}
+
+pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+    Ok(ConfigResponse {
+        redemption_denom: REDEMPTION_DENOM.load(deps.storage)?,
+        cost_per_unit: COST_PER_UNIT.load(deps.storage)?,
+        nft_receipt_token_uri: NFT_RECEIPT_TOKEN_URI.load(deps.storage)?,
+        nft_contract_addr: NFT_CONTRACT.load(deps.storage)?.to_string(),
+        bonding_contract_addr: BONDING_CONTRACT.load(deps.storage)?.to_string(),
+    })
 }
 
 pub fn query_redemptions(
@@ -198,14 +227,16 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             )?;
 
             if let Some(minter) = minter {
-                if minter != env.contract.address.to_string() {
+                if minter != env.contract.address {
                     return Err(ContractError::Unauthorized {});
                 }
             } else {
                 return Err(ContractError::Unauthorized {});
             }
             NFT_CONTRACT.save(deps.storage, &nft_addr_verified)?;
-            Ok(Response::new().add_attribute("method", "instantiate_nft"))
+            Ok(Response::new()
+                .add_attribute("method", "instantiate_nft")
+                .add_attribute("nft_contract", nft_addr_verified.to_string()))
         }
         _ => Err(ContractError::InvalidReplyId {}),
     }

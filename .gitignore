@@ -25,4 +25,8 @@ cw-tokens
 
 transmuter 
 
-osmosis-bonding
+osmosis-bonding 
+
+.env
+
+osmosis

@@ -17,14 +17,14 @@ use crate::msg::{
     SpotPriceResponse, SudoMsg, SwapExactAmountInResponseData, SwapExactAmountOutResponseData,
 };
 use crate::state::{CurveState, CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE};
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgMint};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{
     QueryDenomsFromCreatorResponse, TokenfactoryQuerier,
 };
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-bonding-pool";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const CONTRACT_NAME: &str = "crates.io:cw-bonding-pool";
+pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -156,11 +156,11 @@ pub fn execute_register_token_factory_denom(
     let token_factory_querier = TokenfactoryQuerier::new(&deps.querier);
     let query_denoms_from_creator_response: QueryDenomsFromCreatorResponse = token_factory_querier
         .denoms_from_creator(env.contract.address.to_string())
-        .map_err(|e| StdError::generic_err("failed to load denom"))?;
+        .map_err(|_e| StdError::generic_err("failed to load denom"))?;
 
     // rust iter method to return first matching element: in a vec of strings, find the first string that ends with "/subdenom"
     // `myvec.to_iter().
-    let mut created_denom: String = query_denoms_from_creator_response
+    let created_denom: String = query_denoms_from_creator_response
         .denoms
         .into_iter()
         .find(|denom| denom.ends_with(format!("/{}", subdenom).as_str()))
@@ -171,13 +171,13 @@ pub fn execute_register_token_factory_denom(
 
     ensure_eq!(
         curve_state.supply_denom,
-        created_denom.clone(),
+        created_denom,
         ContractError::TokenFactoryDenomNotFound
     );
 
     ensure_eq!(
         dissolved_curve_state.supply_denom,
-        created_denom.clone(),
+        created_denom,
         ContractError::TokenFactoryDenomNotFound
     );
 

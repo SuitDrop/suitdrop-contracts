@@ -16,8 +16,10 @@ overflow-checks = true
 # rust-version = "1.64.0"
 
 [workspace.dependencies]
+osmosis-test-tube = { git = "https://github.com/osmosis-labs/test-tube.git", branch = "autobuild-v15.0.0" }
 cw721-suit = { path = './contracts/cw721-suit' }
 cw721-base = { version = "0.17.0", features = ["library"] }
+cw721 = { version = "0.17.0" }
 cosmwasm-std = { version = "1.1.9", features = ["stargate"] }
 cosmwasm-storage = "1.1.9"
 cosmwasm-schema = "1.1.9"

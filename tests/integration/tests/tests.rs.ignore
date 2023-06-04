@@ -16,10 +16,10 @@ impl<'a, R: Runner<'a>> Module<'a, R> for Querier<'a, R> {
 
 const NORM: u128 = 40_000_000_000_000;
 
-/* 
+/*
     Test Targets:
 
-    * Creating Cosmwasm Pool works 
+    * Creating Cosmwasm Pool works
     * More than 500 shirts cannot be minted
     * when all shirts are redeemed, the pool contract balance of both shirt and osmo is zero
 
@@ -95,6 +95,7 @@ fn test_tube_integration() {
                 nft_code_id: cw721_code.into(),
                 nft_name: "Shirt NFT".to_string(),
                 nft_symbol: "SHIRT".to_string(),
+                cost_per_unit: 1_000_000u128.into(),
             },
             None,
             None,

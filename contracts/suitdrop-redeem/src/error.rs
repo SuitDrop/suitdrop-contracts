@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{OverflowError, StdError};
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -26,4 +26,8 @@ pub enum ContractError {
 
     #[error("Invalid reply id")]
     InvalidReplyId {},
+
+    // overflow
+    #[error("Overflow error")]
+    OverflowError(#[from] OverflowError),
 }

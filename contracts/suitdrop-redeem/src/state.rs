@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint128, Uint64};
 use cw_storage_macro::index_list;
 use cw_storage_plus::{IndexedMap, Item, UniqueIndex};
 
@@ -37,10 +37,14 @@ impl Default for RedemptionState<'_> {
     }
 }
 
-pub const REDEMPTION_INCREMENT: Item<u32> = Item::new("redemption_increment");
+pub const REDEMPTION_INCREMENT: Item<Uint64> = Item::new("redemption_increment");
 
 pub const REDEMPTION_DENOM: Item<String> = Item::new("redemption_denom");
+
+pub const COST_PER_UNIT: Item<Uint128> = Item::new("cost_per_unit");
 
 pub const NFT_CONTRACT: Item<Addr> = Item::new("nft_contract");
 
 pub const BONDING_CONTRACT: Item<Addr> = Item::new("bonding_contract");
+
+pub const NFT_RECEIPT_TOKEN_URI: Item<String> = Item::new("nft_receipt_token_uri");

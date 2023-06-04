@@ -70,9 +70,9 @@ pub fn create_coin_io_messages(
 
 #[cfg(test)]
 pub mod tests {
-    use std::str::FromStr;
+    
 
-    use cosmwasm_std::{coin, from_binary, to_binary};
+    use cosmwasm_std::{coin};
 
     use super::*;
 
@@ -102,13 +102,13 @@ pub mod tests {
             MsgMint {
                 amount: Some(coin(1000000u128, "uosmo").into()),
                 mint_to_address: sender.clone(),
-                sender: sender.clone(),
+                sender: sender,
             }
             .into()
         );
 
         match msgs[0].clone() {
-            CosmosMsg::Stargate { type_url, value } => {}
+            CosmosMsg::Stargate { type_url: _, value: _ } => {}
             _ => panic!("Unexpected message type"),
         }
     }
