@@ -43,17 +43,17 @@ The proposed roadmap for implementing Suitdrop is as follows:
 - Future TBD (ETA: Q1/Q2 '24): Suitdrop-as-a-Service
 
 ## Tokenomics
-The first suitdrop, $SHIRT, is an exclusive, limited-edition tee designed by YOU! In total, 500 $SHIRT tokens will be minted, with 100 allocated for free to the top 100 qualifying stakers. One $SHIRT is redeemable for a physical Cosmos tee. Read more about it in our [proposal](./cw-bonding-pool/proposal.md).
+The first suitdrop, $SHIRT, is an exclusive, limited-edition tee designed by YOU! In total, 500 $SHIRT tokens will be minted, with 100 allocated for free to the top 100 qualifying stakers. One $SHIRT is redeemable for a physical Cosmos tee. Read more about it in our commonwealth proposal.
 
 ## FAQs
-- [Why is it called "suitdrop"?](./docs/FAQ.md#why-suitdrop)
-- [What is Suitdrop-as-a-Service?](./docs/FAQ.md#what-is-saas)
+- [Why is it called "suitdrop"?](./FAQ.md#why-suitdrop)
+- [What is Suitdrop-as-a-Service?](./FAQ.md#what-is-saas)
 
 ## Getting Started
 To get started with Suitdrop, navigate to the respective contract folders in the repository:
-- [`cw-bonding-pool`](./cw-bonding-pool/README.md)
-- [`cw721-suit`](./cw721-suit/README.md)
-- [`suitdrop-redeem`](./suitdrop-redeem/README.md)
+- [`cw-bonding-pool`](./contracts/cw-bonding-pool/README.md)
+- [`cw721-suit`](./contracts/cw721-suit/README.md)
+- [`suitdrop-redeem`](./contracts/suitdrop-redeem/README.md)
 
 Each directory contains specific README files and code that detail the respective contract's functionalities and usage instructions.
 
