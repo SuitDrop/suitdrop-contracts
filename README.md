@@ -1,6 +1,7 @@
 # Suitdrop Protocol - Blockchain Merchandise Distribution System
 
-Hello Cosmos and Osmosis developers, validators, and contributors! Welcome to the revolutionary new blockchain protocol designed to automate the minting/burning of fungible tokens redeemable for physical merchandise, thereby providing a framework for engaging with users and communities.
+Welcome to the Suitdrop protocol, a cosmwasm smart contract system designed to automate the minting and burning of fungible tokens redeemable for physical merchandise. This presents a robust and novel framework for engaging with users and communities in the Cosmos ecosystem. This transformative protocol paves the way for a new era of interaction between developers, validators, and contributors.
+
 
 ## Table of Contents
 1. [Suitdrop Protocol - Blockchain Merchandise Distribution System](#suitdrop-protocol---blockchain-merchandise-distribution-system)
