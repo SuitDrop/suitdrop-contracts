@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     coin, coins, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
-use cw_bonding_pool::msg::{CurveType};
+use cw_bonding_pool::msg::CurveType;
 use cw_multi_test::{App, ContractWrapper, Executor};
 use suitdrop_redeem::{
     msg::{ConfigResponse, RedemptionResponse, RedemptionsResponse},
@@ -273,7 +273,7 @@ fn test_integration() {
     let actual_redemption: RedemptionResponse = app
         .wrap()
         .query_wasm_smart(
-            redeem_addr,
+            redeem_addr.clone(),
             &suitdrop_redeem::msg::QueryMsg::Redemption {
                 id: Some("1".to_string()),
                 proof: Some("abcde".to_string()),
@@ -285,6 +285,56 @@ fn test_integration() {
     // should mint nft to redeemer and execute dissolve message on bonding contract
     let expected_nfts = cw721::TokensResponse {
         tokens: vec!["1".to_string()],
+    };
+    let actual_nfts: cw721::TokensResponse = app
+        .wrap()
+        .query_wasm_smart(
+            nft_contract_addr.clone(),
+            &cw721_suit::msg::QueryMsg::Tokens {
+                owner: create_root_addr().to_string(),
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(expected_nfts, actual_nfts);
+
+    // second round
+
+    // should succeed with sufficient ushirt
+    app.execute_contract(
+        create_root_addr(),
+        redeem_addr.clone(),
+        &suitdrop_redeem::msg::ExecuteMsg::Redeem {
+            proof: "abcdef".to_string(),
+        },
+        &coins(1_000_000u128, "ushirt"),
+    )
+    .unwrap();
+
+    let expected_redemption: RedemptionResponse = RedemptionResponse {
+        redemption: Redemption {
+            id: "2".to_string(),
+            proof: "abcdef".to_string(),
+            redeemer: create_root_addr().to_string(),
+        },
+    };
+    let actual_redemption: RedemptionResponse = app
+        .wrap()
+        .query_wasm_smart(
+            redeem_addr,
+            &suitdrop_redeem::msg::QueryMsg::Redemption {
+                id: Some("2".to_string()),
+                proof: Some("abcdef".to_string()),
+            },
+        )
+        .unwrap();
+    assert_eq!(expected_redemption, actual_redemption);
+
+    // should mint nft to redeemer and execute dissolve message on bonding contract
+    let expected_nfts = cw721::TokensResponse {
+        tokens: vec!["1".to_string(), "2".to_string()],
     };
     let actual_nfts: cw721::TokensResponse = app
         .wrap()
