@@ -8,11 +8,10 @@ use suitdrop_redeem::{
     state::Redemption,
 };
 
-const NORM: u128 = 40_000_000_000_000;
-
 fn create_root_addr() -> Addr {
     Addr::unchecked("root")
 }
+
 #[test]
 fn test_integration() {
     let mut app = App::default();

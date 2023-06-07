@@ -40,17 +40,17 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [dependencies]
-cosmwasm-schema = "1.1.2"
-cosmwasm-std = "1.1.2"
-cosmwasm-storage = "1.1.2"
-cw-storage-plus = "0.13.2"
-cw2 = "0.13.2"
-schemars = "0.8.8"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
-cw721 = { version = "0.17.0" }
-cw-storage-macro = { version = "1.0.1" }
-cw-utils = { version = "1.0.1" }
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cosmwasm-storage = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw2 = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cw721 = { workspace = true }
+cw-storage-macro = { workspace = true }
+cw-utils = { workspace = true }
 cw721-suit = { workspace = true }
 cw721-base = { workspace = true }
 cw-bonding-pool = { path = "../cw-bonding-pool", features = ["library"] }
