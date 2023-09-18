@@ -1,28 +1,25 @@
 # import .env
 source .env
 
-OSMOSIS_KEY_NAME="suitdroptestnet"
-
-# configure keys
-echo "$TEST_MNEMONIC" | osmosisd keys add "$OSMOSIS_KEY_NAME" --keyring-backend test --recover
+source ./scripts/config.sh
 
 # var
-TAG=$1
+# TAG=$1
 
-# assert valid tag provided. exit with message if not
-if [ -z "$TAG" ]
-then
-  echo "No tag provided. Please provide a valid tag."
-  exit 1
-fi
+# # assert valid tag provided. exit with message if not
+# if [ -z "$TAG" ]
+# then
+#   echo "No tag provided. Please provide a valid tag."
+#   exit 1
+# fi
 
 # download latest compiled release artifacts from github via curl
 # e.g. https://github.com/SuitDrop/suitdrop-contracts/releases/download/v0.0.7/cosmwasm-artifacts.tar.gz
-curl -LO "https://github.com/SuitDrop/suitdrop-contracts/releases/download/$TAG/cosmwasm-artifacts.tar.gz"
-echo "https://github.com/SuitDrop/suitdrop-contracts/releases/download/$TAG/cosmwasm-artifacts.tar.gz"
+# curl -LO "https://github.com/SuitDrop/suitdrop-contracts/releases/download/$TAG/cosmwasm-artifacts.tar.gz"
+# echo "https://github.com/SuitDrop/suitdrop-contracts/releases/download/$TAG/cosmwasm-artifacts.tar.gz"
 
-# extract tarball
-tar -xvf cosmwasm-artifacts.tar.gz
+# # extract tarball
+# tar -xvf cosmwasm-artifacts.tar.gz
 
 # iteratively deploy each artifact to osmosis testnet via osmosisd tx wasm store
 
@@ -44,11 +41,14 @@ for file in ./artifacts/*.wasm; do
       --keyring-backend test \
       --output json \
       --yes)
+    # wait 6 seconds 
+    sleep 6
     # write response to file
-    echo $TX_RESPONSE > ./artifacts/tx_response.$I.json
-    CODE_ID=$(echo $TX_RESPONSE | jq -r '.data.code_info.code_id')
-
-    # get code hash
-    CODE_HASH=$(osmosisd q wasm code $CODE_ID | jq -r '.data.code_info.code_hash')
-    echo "Code ID: $CODE_ID, Code Hash: $CODE_HASH"
+    FILE_NAME=$(basename $file)
+    echo $TX_RESPONSE > ./artifacts/tx_response.$FILE_NAME.json
+    CODE_ID=$(echo $TX_RESPONSE | jq -r '.logs[].events[] | select(.type=="store_code") | .attributes[] | select(.key=="code_id") | .value')
+    # write code id to file 
+    # extract filename from path
+    echo $CODE_ID > ./artifacts/code_id.$FILE_NAME.txt
+    echo "$FILE_NAME CODE ID: $CODE_ID"
 done

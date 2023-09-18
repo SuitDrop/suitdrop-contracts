@@ -1,47 +1,38 @@
-
-
-
-use cosmwasm_std::{
-    Coin, Decimal, Deps, StdError, Uint128,
-};
-
-
+use cosmwasm_std::{Coin, Decimal, Deps, StdError, Uint128};
 
 use crate::error::ContractError;
-use crate::msg::{
-    CurveFn,
-};
-use crate::state::{CurveState, CURVE_STATE, CURVE_TYPE};
+use crate::msg::{CurveFn, CurveType};
+use crate::state::CurveState;
 
 // SwapExactAmountIn swaps an exact amount of tokens in for as many tokens out as possible.
 /// The amount of tokens out is determined by the current exchange rate and the swap fee.
 /// The user specifies a minimum amount of tokens out, and the transaction will revert if that amount of tokens
 /// is not received.
 pub fn calc_swap_exact_amount_in(
-    deps: Deps,
+    _deps: Deps,
     token_in: Coin,
     token_out_denom: String,
     _swap_fee: Decimal,
+    curve_state: CurveState,
+    curve_type: CurveType,
 ) -> Result<(Uint128, CurveState), ContractError> {
-    let state = CURVE_STATE.load(deps.storage)?;
-    let curve_type = CURVE_TYPE.load(deps.storage)?;
     let curve_fn = curve_type.to_curve_fn();
     // if received reserve token, is buy. if received supply token, is sell.
 
-    if &token_in.denom == &state.reserve_denom {
-        if token_out_denom != state.supply_denom {
+    if &token_in.denom == &curve_state.reserve_denom {
+        if token_out_denom != curve_state.supply_denom {
             return Err(ContractError::Std(StdError::generic_err(
                 "invalid token out denom",
             )));
         }
-        calc_buy_exact_in(state, curve_fn, token_in.amount)
-    } else if &token_in.denom == &state.supply_denom {
-        if token_out_denom != state.reserve_denom {
+        calc_buy_exact_in(curve_state, curve_fn, token_in.amount)
+    } else if &token_in.denom == &curve_state.supply_denom {
+        if token_out_denom != curve_state.reserve_denom {
             return Err(ContractError::Std(StdError::generic_err(
                 "invalid token out denom",
             )));
         }
-        calc_sell_exact_in(state, curve_fn, token_in.amount)
+        calc_sell_exact_in(curve_state, curve_fn, token_in.amount)
     } else {
         Err(ContractError::Std(StdError::generic_err(
             "invalid token in denom",
@@ -50,37 +41,37 @@ pub fn calc_swap_exact_amount_in(
 }
 
 pub fn calc_swap_exact_amount_out(
-    deps: Deps,
+    _deps: Deps,
     token_in_denom: String,
     token_out: Coin,
     swap_fee: Decimal,
+    curve_state: CurveState,
+    curve_type: CurveType,
 ) -> Result<(Uint128, CurveState), ContractError> {
     if !swap_fee.is_zero() {
         return Err(ContractError::Std(StdError::generic_err(
             "swap fee must be zero",
         )));
     }
-    let state = CURVE_STATE.load(deps.storage)?;
-    let curve_type = CURVE_TYPE.load(deps.storage)?;
     let curve_fn = curve_type.to_curve_fn();
     // if received reserve token, is buy. if received supply token, is sell.
 
-    if &token_in_denom == &state.reserve_denom {
-        if token_out.denom != state.supply_denom {
+    if &token_in_denom == &curve_state.reserve_denom {
+        if token_out.denom != curve_state.supply_denom {
             return Err(ContractError::Std(StdError::generic_err(
                 "invalid token out denom",
             )));
         }
 
-        calc_buy_exact_out(state, curve_fn, token_out.amount)
-    } else if &token_in_denom == &state.supply_denom {
-        if token_out.denom != state.reserve_denom {
+        calc_buy_exact_out(curve_state, curve_fn, token_out.amount)
+    } else if &token_in_denom == &curve_state.supply_denom {
+        if token_out.denom != curve_state.reserve_denom {
             return Err(ContractError::Std(StdError::generic_err(
                 "invalid token out denom",
             )));
         }
 
-        calc_sell_exact_out(state, curve_fn, token_out.amount)
+        calc_sell_exact_out(curve_state, curve_fn, token_out.amount)
     } else {
         Err(ContractError::Std(StdError::generic_err(
             "invalid token in denom",
@@ -167,7 +158,6 @@ mod tests {
         msg::CurveType,
     };
     use cosmwasm_std::Decimal as StdDecimal;
-    
 
     use super::*;
 

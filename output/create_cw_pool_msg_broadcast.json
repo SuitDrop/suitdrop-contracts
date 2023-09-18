@@ -1,0 +1,106 @@
+{
+  "height": "10898651",
+  "txhash": "02B7F7C2633FCA3D0CEAFB59A0BFD736DCAA249C87577513D5844EEDC3E246D2",
+  "codespace": "undefined",
+  "code": 1,
+  "data": "",
+  "raw_log": "failed to execute message; message index: 0: cannot create coswasm pool with the given code id (2). Please whitelist it via governance",
+  "logs": [],
+  "info": "",
+  "gas_wanted": "9204928",
+  "gas_used": "76559",
+  "tx": null,
+  "timestamp": "",
+  "events": [
+    {
+      "type": "coin_spent",
+      "attributes": [
+        {
+          "key": "c3BlbmRlcg==",
+          "value": "b3NtbzFjeXl6cHhwbHhkemtlZWE3a3dzeWRhZGc4NzM1N3FuYWhha2Frcw==",
+          "index": false
+        },
+        {
+          "key": "YW1vdW50",
+          "value": "MjMwMTN1b3Ntbw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "coin_received",
+      "attributes": [
+        {
+          "key": "cmVjZWl2ZXI=",
+          "value": "b3NtbzE3eHBmdmFrbTJhbWc5NjJ5bHM2Zjg0ejNrZWxsOGM1bGN6c3NhMA==",
+          "index": false
+        },
+        {
+          "key": "YW1vdW50",
+          "value": "MjMwMTN1b3Ntbw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "transfer",
+      "attributes": [
+        {
+          "key": "cmVjaXBpZW50",
+          "value": "b3NtbzE3eHBmdmFrbTJhbWc5NjJ5bHM2Zjg0ejNrZWxsOGM1bGN6c3NhMA==",
+          "index": false
+        },
+        {
+          "key": "c2VuZGVy",
+          "value": "b3NtbzFjeXl6cHhwbHhkemtlZWE3a3dzeWRhZGc4NzM1N3FuYWhha2Frcw==",
+          "index": false
+        },
+        {
+          "key": "YW1vdW50",
+          "value": "MjMwMTN1b3Ntbw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "attributes": [
+        {
+          "key": "c2VuZGVy",
+          "value": "b3NtbzFjeXl6cHhwbHhkemtlZWE3a3dzeWRhZGc4NzM1N3FuYWhha2Frcw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "ZmVl",
+          "value": "MjMwMTN1b3Ntbw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "YWNjX3NlcQ==",
+          "value": "b3NtbzFjeXl6cHhwbHhkemtlZWE3a3dzeWRhZGc4NzM1N3FuYWhha2Frcy8xMw==",
+          "index": false
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "c2lnbmF0dXJl",
+          "value": "d2tXcHVBbTFxYVFXQkxiRlBCWnZadW9GTXVLVzdsRnVLaDgraGJQajYwZDV3cC9GUUdEYTRhWXNjdmI0d21TRTM5aEtscUNHNEdRZTM2OWs3ejNkQUE9PQ==",
+          "index": false
+        }
+      ]
+    }
+  ]
+}

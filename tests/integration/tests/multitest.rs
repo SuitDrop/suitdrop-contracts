@@ -62,6 +62,8 @@ fn test_integration() {
                     slope: 1u128.into(),
                     scale: 1u32,
                 },
+                test_mode: None,
+                simulation_mode: None,
             },
             &[],
             "cw-bonding-pool",

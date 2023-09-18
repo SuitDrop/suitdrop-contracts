@@ -1,0 +1,22 @@
+[package]
+name = "suitdrop-orch"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cw-orch = { version = "0.12.0", optional = false }
+cw-bonding-pool = { version = "0.1.0", path = "../../contracts/cw-bonding-pool", features = [
+  "library",
+] }
+cosmwasm-std = { workspace = true }
+
+[dev-dependencies]
+# Deps for deployment
+dotenv = { version = "0.15.0" }     # Enables loading of .env files
+env_logger = { version = "0.10.0" } # Enables logging to stdout

@@ -42,3 +42,7 @@ pub const CURVE_TYPE: Item<CurveType> = Item::new("curve_type");
 pub const IS_ACTIVE: Item<bool> = Item::new("is_active");
 
 pub const DISSOLVED_CURVE_STATE: Item<CurveState> = Item::new("dissolved_curve_state");
+
+pub const IS_TEST_MODE: Item<bool> = Item::new("is_test_mode");
+
+pub const IS_SIMULATION_MODE: Item<bool> = Item::new("is_simulation_mode");

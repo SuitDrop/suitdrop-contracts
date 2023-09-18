@@ -1,0 +1,119 @@
+{
+  "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a": {
+    "address": "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
+    "amount": "1000000",
+    "index": 0,
+    "proof": [
+      "d364020188ddb8ae2122a9c94e5a2499418dedc8d2697cabe62fe7e48a8d75a4",
+      "dbbaa79e030b8a00c2cdcf60ea2c85316b266dd3592f13061aa4d6299bfaf7a5",
+      "108f643e19afb49e20dbb3cd2cd8b3cf53e272452ba45e7317aecaaca9d5a4b7"
+    ]
+  },
+  "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks": {
+    "address": "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks",
+    "amount": "1000000",
+    "index": 1,
+    "proof": [
+      "1f942f36fc30da6cdfbc1e35e7b8aca3541efe32658d544c1455057e2308b426",
+      "5d98bdbdf0d19b5dc0bb1e97b168f742bb28d0d564ab90a27db0a7ba2fc8de1f",
+      "28812cd39eee462fe8b946ff8cca388a4db65139207e9fd3a8aba3637d107e40",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv": {
+    "address": "osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv",
+    "amount": "1000000",
+    "index": 2,
+    "proof": [
+      "70a538cc11e3e37ff9c1839ab79de2d40c77a65d661bbc9b329c5bc75f28bdf1",
+      "e65c3ab14cd172854b7fcc4b21b8402157ca3a08156fd4eff9d920d2c0d2c178",
+      "4182515efc663b5e075ab39e351b9b29a5926372b1f0d80c24a3d8aa59132d89",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo1qwexv7c6sm95lwhzn9027vyu2ccneaqad4w8ka": {
+    "address": "osmo1qwexv7c6sm95lwhzn9027vyu2ccneaqad4w8ka",
+    "amount": "1000000",
+    "index": 3,
+    "proof": [
+      "d68a465cccf6bb10cf3438cef78425d020cf3e4e4f024cb9aff0cc14faccd10e",
+      "dbbaa79e030b8a00c2cdcf60ea2c85316b266dd3592f13061aa4d6299bfaf7a5",
+      "108f643e19afb49e20dbb3cd2cd8b3cf53e272452ba45e7317aecaaca9d5a4b7"
+    ]
+  },
+  "osmo14hcxlnwlqtq75ttaxf674vk6mafspg8xwgnn53": {
+    "address": "osmo14hcxlnwlqtq75ttaxf674vk6mafspg8xwgnn53",
+    "amount": "1000000",
+    "index": 4,
+    "proof": [
+      "cdf8217d4cf7c7aa4e89d1e4261602e21bb5da38047f48bb33e76c4ed1440a3b",
+      "261c45419c11e507b73c4a8409e70d961d1b5218a7b115e6f8541711ff8aab5f",
+      "4182515efc663b5e075ab39e351b9b29a5926372b1f0d80c24a3d8aa59132d89",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo12rr534cer5c0vj53eq4y32lcwguyy7nndt0u2t": {
+    "address": "osmo12rr534cer5c0vj53eq4y32lcwguyy7nndt0u2t",
+    "amount": "1000000",
+    "index": 5,
+    "proof": [
+      "932ff5922505038a30380e715e42324aaebdb71f755602b065ebaa98ea0afaaf",
+      "261c45419c11e507b73c4a8409e70d961d1b5218a7b115e6f8541711ff8aab5f",
+      "4182515efc663b5e075ab39e351b9b29a5926372b1f0d80c24a3d8aa59132d89",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo1nt33cjd5auzh36syym6azgc8tve0jlvklnq7jq": {
+    "address": "osmo1nt33cjd5auzh36syym6azgc8tve0jlvklnq7jq",
+    "amount": "1000000",
+    "index": 6,
+    "proof": [
+      "31a28f0475dd3a8c208fb686921f32da261d2ae891008ab1aa1dff6f9ab67ae2",
+      "5d98bdbdf0d19b5dc0bb1e97b168f742bb28d0d564ab90a27db0a7ba2fc8de1f",
+      "28812cd39eee462fe8b946ff8cca388a4db65139207e9fd3a8aba3637d107e40",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo10qfrpash5g2vk3hppvu45x0g860czur8ff5yx0": {
+    "address": "osmo10qfrpash5g2vk3hppvu45x0g860czur8ff5yx0",
+    "amount": "1000000",
+    "index": 7,
+    "proof": [
+      "8269e272e945bdf5d01143f11b626e98af8d3ce25944f8c18e68cf76eee5f8ca",
+      "108f643e19afb49e20dbb3cd2cd8b3cf53e272452ba45e7317aecaaca9d5a4b7"
+    ]
+  },
+  "osmo1f4tvsdukfwh6s9swrc24gkuz23tp8pd3e9r5fa": {
+    "address": "osmo1f4tvsdukfwh6s9swrc24gkuz23tp8pd3e9r5fa",
+    "amount": "1000000",
+    "index": 8,
+    "proof": [
+      "43c5a554c2875aa87a107a04c7fe76ba11b6416d32b63a55e3d86d179205a65d",
+      "f2318352921946bd57c016242f97ddc86018da9cb089b71c46c682605386b230",
+      "28812cd39eee462fe8b946ff8cca388a4db65139207e9fd3a8aba3637d107e40",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo1myv43sqgnj5sm4zl98ftl45af9cfzk7nhjxjqh": {
+    "address": "osmo1myv43sqgnj5sm4zl98ftl45af9cfzk7nhjxjqh",
+    "amount": "1000000",
+    "index": 9,
+    "proof": [
+      "42a0268b39b6000803cdf78c1cc2dd0c454fed0d70830186589884f033481cc8",
+      "f2318352921946bd57c016242f97ddc86018da9cb089b71c46c682605386b230",
+      "28812cd39eee462fe8b946ff8cca388a4db65139207e9fd3a8aba3637d107e40",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  },
+  "osmo14gs9zqh8m49yy9kscjqu9h72exyf295afg6kgk": {
+    "address": "osmo14gs9zqh8m49yy9kscjqu9h72exyf295afg6kgk",
+    "amount": "1000000",
+    "index": 10,
+    "proof": [
+      "5a30816418d83b66667d5e7d26118f56dd00a3f3788c4fe39a08f7d414505dcc",
+      "e65c3ab14cd172854b7fcc4b21b8402157ca3a08156fd4eff9d920d2c0d2c178",
+      "4182515efc663b5e075ab39e351b9b29a5926372b1f0d80c24a3d8aa59132d89",
+      "2b1465a5fdb72f66ca5318aed777abf44c4e3403b911b807c19d0c967a63f9d2"
+    ]
+  }
+}

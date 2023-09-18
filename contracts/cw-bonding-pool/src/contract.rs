@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, coins, ensure_eq, to_binary, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128, WasmMsg,
+    coin, coins, ensure, to_binary, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps,
+    DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_utils::{must_pay, one_coin};
@@ -12,15 +12,17 @@ use crate::curves::DecimalPlaces;
 use crate::error::ContractError;
 use crate::helpers::mint_or_send;
 use crate::msg::{
-    CalcInAmtGivenOutResponse, CalcOutAmtGivenInResponse, ExecuteMsg, GetSwapFeeResponse,
-    GetTotalPoolLiquidityResponse, InstantiateMsg, IsActiveResponse, MigrateMsg, QueryMsg,
-    SpotPriceResponse, SudoMsg, SwapExactAmountInResponseData, SwapExactAmountOutResponseData,
+    BondingPoolState, CalcInAmtGivenOutResponse, CalcOutAmtGivenInResponse, CurveType, ExecuteMsg,
+    GetSwapFeeResponse, GetTotalPoolLiquidityResponse, InstantiateMsg, IsActiveResponse,
+    MigrateMsg, QueryMsg, SimulationMsg, SpotPriceResponse, SudoMsg, SwapExactAmountInResponseData,
+    SwapExactAmountOutResponseData,
 };
-use crate::state::{CurveState, CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE};
+use crate::state::{
+    CurveState, CURVE_STATE, CURVE_TYPE, DISSOLVED_CURVE_STATE, IS_ACTIVE, IS_SIMULATION_MODE,
+    IS_TEST_MODE,
+};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::{
-    QueryDenomsFromCreatorResponse, TokenfactoryQuerier,
-};
+
 
 // version info for migration info
 pub const CONTRACT_NAME: &str = "crates.io:cw-bonding-pool";
@@ -38,34 +40,36 @@ pub fn instantiate(
 
     let supply_denom = format!(
         "factory/{}/{}",
-        env.contract.address.to_string(),
+        env.contract.address,
         msg.supply_subdenom
     );
     let places = DecimalPlaces::new(msg.supply_decimals, msg.reserve_decimals);
     let supply = CurveState::new(msg.reserve_denom, supply_denom, places);
 
+    DISSOLVED_CURVE_STATE.save(deps.storage, &supply)?;
     CURVE_STATE.save(deps.storage, &supply)?;
     CURVE_TYPE.save(deps.storage, &msg.curve_type)?;
+    IS_ACTIVE.save(deps.storage, &true)?;
+    IS_TEST_MODE.save(deps.storage, &msg.test_mode.unwrap_or(false))?;
+    IS_SIMULATION_MODE.save(deps.storage, &msg.simulation_mode.unwrap_or(false))?;
+
+    if msg.simulation_mode.unwrap_or(false) {
+        // return without executing messages if in simulation mode
+        return Ok(Response::new()
+            .add_attribute("method", "instantiate")
+            .add_attribute("owner", info.sender));
+    }
 
     let msg_create_denom: CosmosMsg = MsgCreateDenom {
         sender: env.contract.address.to_string(),
-        subdenom: msg.supply_subdenom.clone(),
+        subdenom: msg.supply_subdenom,
     }
     .into();
-
-    let register_denom_msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: env.contract.address.to_string(),
-        msg: to_binary(&ExecuteMsg::RegisterTokenFactorySupplyDenom {
-            subdenom: msg.supply_subdenom,
-        })?,
-        funds: vec![],
-    });
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
     Ok(Response::new()
         .add_message(msg_create_denom)
-        .add_message(register_denom_msg)
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
 }
@@ -94,8 +98,35 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Dissolve { .. } => execute_dissolve(deps, env, info),
-        ExecuteMsg::RegisterTokenFactorySupplyDenom { subdenom } => {
-            execute_register_token_factory_denom(deps, env, info, subdenom)
+        ExecuteMsg::Sudo(sudo_msg) => {
+            ensure!(
+                IS_TEST_MODE.may_load(deps.storage)?.unwrap_or(false),
+                ContractError::Unauthorized {}
+            );
+            sudo(deps, env, sudo_msg)
+        }
+        ExecuteMsg::Simulate(sim_msg) => {
+            ensure!(
+                IS_SIMULATION_MODE.may_load(deps.storage)?.unwrap_or(false),
+                ContractError::Unauthorized {}
+            );
+            execute_simulate(deps, env, sim_msg)
+        }
+    }
+}
+
+pub fn execute_simulate(
+    deps: DepsMut,
+    _env: Env,
+    msg: SimulationMsg,
+) -> Result<Response, ContractError> {
+    match msg {
+        SimulationMsg::SetState { state } => {
+            CURVE_STATE.save(deps.storage, &state.curve_state)?;
+            DISSOLVED_CURVE_STATE.save(deps.storage, &state.dissolved_curve_state)?;
+            CURVE_TYPE.save(deps.storage, &state.curve_type)?;
+            IS_ACTIVE.save(deps.storage, &state.is_active)?;
+            Ok(Response::new().add_attribute("method", "simulate"))
         }
     }
 }
@@ -140,51 +171,6 @@ pub fn execute_dissolve(
         .add_attribute("dissolved", paid)
         .add_attribute("distributed", dissolved_reserve_cost)
         .add_messages(messages))
-}
-
-pub fn execute_register_token_factory_denom(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    subdenom: String,
-) -> Result<Response, ContractError> {
-    ensure_eq!(
-        info.sender,
-        env.contract.address,
-        ContractError::Unauthorized {}
-    );
-    let token_factory_querier = TokenfactoryQuerier::new(&deps.querier);
-    let query_denoms_from_creator_response: QueryDenomsFromCreatorResponse = token_factory_querier
-        .denoms_from_creator(env.contract.address.to_string())
-        .map_err(|_e| StdError::generic_err("failed to load denom"))?;
-
-    // rust iter method to return first matching element: in a vec of strings, find the first string that ends with "/subdenom"
-    // `myvec.to_iter().
-    let created_denom: String = query_denoms_from_creator_response
-        .denoms
-        .into_iter()
-        .find(|denom| denom.ends_with(format!("/{}", subdenom).as_str()))
-        .ok_or(ContractError::TokenFactoryDenomNotFound)?;
-
-    let curve_state = CURVE_STATE.load(deps.storage)?;
-    let dissolved_curve_state = DISSOLVED_CURVE_STATE.load(deps.storage)?;
-
-    ensure_eq!(
-        curve_state.supply_denom,
-        created_denom,
-        ContractError::TokenFactoryDenomNotFound
-    );
-
-    ensure_eq!(
-        dissolved_curve_state.supply_denom,
-        created_denom,
-        ContractError::TokenFactoryDenomNotFound
-    );
-
-    Ok(Response::new()
-        .add_attribute("method", "register_token_factory_supply_denom")
-        .add_attribute("owner", info.sender)
-        .add_attribute("subdenom", subdenom))
 }
 
 /// Handling contract execution
@@ -260,8 +246,14 @@ pub fn execute_swap_exact_amount_in(
     token_out_min_amount: Uint128,
     swap_fee: Decimal,
 ) -> Result<Response, ContractError> {
-    let (token_out_amount, _state) =
-        calc_swap_exact_amount_in(deps.as_ref(), token_in, token_out_denom.clone(), swap_fee)?;
+    let (token_out_amount, curve) = calc_swap_exact_amount_in(
+        deps.as_ref(),
+        token_in,
+        token_out_denom.clone(),
+        swap_fee,
+        CURVE_STATE.load(deps.storage)?,
+        CURVE_TYPE.load(deps.storage)?,
+    )?;
 
     if token_out_amount < token_out_min_amount {
         return Err(ContractError::Std(StdError::generic_err(
@@ -269,7 +261,7 @@ pub fn execute_swap_exact_amount_in(
         )));
     }
 
-    let curve = CURVE_STATE.load(deps.storage)?;
+    CURVE_STATE.save(deps.storage, &curve)?;
 
     let send_msg = mint_or_send(
         curve.supply_denom,
@@ -300,8 +292,14 @@ pub fn execute_swap_exact_amount_out(
     token_out: Coin,
     swap_fee: Decimal,
 ) -> Result<Response, ContractError> {
-    let (token_in_amount, state) =
-        calc_swap_exact_amount_out(deps.as_ref(), token_in_denom, token_out.clone(), swap_fee)?;
+    let (token_in_amount, state) = calc_swap_exact_amount_out(
+        deps.as_ref(),
+        token_in_denom,
+        token_out.clone(),
+        swap_fee,
+        CURVE_STATE.load(deps.storage)?,
+        CURVE_TYPE.load(deps.storage)?,
+    )?;
 
     CURVE_STATE.save(deps.storage, &state)?;
 
@@ -326,11 +324,26 @@ pub fn execute_swap_exact_amount_out(
 /// Handling contract query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let curve_state = || CURVE_STATE.load(deps.storage);
+    let curve_type = || CURVE_TYPE.load(deps.storage);
+    let is_active = || IS_ACTIVE.load(deps.storage);
+
+    query_pool_msg_with_state(deps, env, msg, &curve_state, &curve_type, &is_active)
+}
+
+pub fn query_pool_msg_with_state(
+    deps: Deps,
+    env: Env,
+    msg: QueryMsg,
+    curve_state: &dyn Fn() -> StdResult<CurveState>,
+    curve_type: &dyn Fn() -> StdResult<CurveType>,
+    is_active: &dyn Fn() -> StdResult<bool>,
+) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::GetSwapFee {} => to_binary(&query_get_swap_fee(deps, env)?),
-        QueryMsg::IsActive {} => to_binary(&query_is_active(deps, env)?),
+        QueryMsg::IsActive {} => to_binary(&query_is_active(deps, env, is_active()?)?),
         QueryMsg::GetTotalPoolLiquidity {} => {
-            to_binary(&query_get_total_pool_liquidity(deps, env)?)
+            to_binary(&query_get_total_pool_liquidity(deps, env, curve_state()?)?)
         }
         QueryMsg::SpotPrice {
             quote_asset_denom,
@@ -340,6 +353,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             env,
             quote_asset_denom,
             base_asset_denom,
+            curve_state()?,
+            curve_type()?,
         )?),
         QueryMsg::CalcOutAmtGivenIn {
             token_in,
@@ -351,6 +366,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             token_in,
             token_out_denom,
             swap_fee,
+            curve_state()?,
+            curve_type()?,
         )?),
         QueryMsg::CalcInAmtGivenOut {
             token_out,
@@ -362,7 +379,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             token_out,
             token_in_denom,
             swap_fee,
+            curve_state()?,
+            curve_type()?,
         )?),
+        QueryMsg::BondingPoolState {} => to_binary(&BondingPoolState {
+            curve_state: curve_state()?,
+            dissolved_curve_state: DISSOLVED_CURVE_STATE.load(deps.storage)?,
+            curve_type: curve_type()?,
+            is_active: is_active()?,
+        }),
         // Find matched incoming message variant and query them your custom logic
         // and then construct your query response with the type usually defined
         // `msg.rs` alongside with the query message itself.
@@ -378,17 +403,17 @@ pub fn query_get_swap_fee(_deps: Deps, _env: Env) -> StdResult<GetSwapFeeRespons
     })
 }
 
-pub fn query_is_active(deps: Deps, _env: Env) -> StdResult<IsActiveResponse> {
+pub fn query_is_active(deps: Deps, _env: Env, _is_active: bool) -> StdResult<IsActiveResponse> {
     Ok(IsActiveResponse {
         is_active: IS_ACTIVE.load(deps.storage)?,
     })
 }
 
 pub fn query_get_total_pool_liquidity(
-    deps: Deps,
+    _deps: Deps,
     _env: Env,
+    curve_state: CurveState,
 ) -> Result<GetTotalPoolLiquidityResponse, ContractError> {
-    let curve_state = CURVE_STATE.load(deps.storage)?;
     Ok(GetTotalPoolLiquidityResponse {
         total_pool_liquidity: vec![
             coin(curve_state.supply.u128(), curve_state.supply_denom),
@@ -398,16 +423,16 @@ pub fn query_get_total_pool_liquidity(
 }
 
 pub fn query_spot_price(
-    deps: Deps,
+    _deps: Deps,
     _env: Env,
     quote_asset_denom: String,
     base_asset_denom: String,
+    curve_state: CurveState,
+    curve_type: CurveType,
 ) -> Result<SpotPriceResponse, ContractError> {
-    let state = CURVE_STATE.load(deps.storage)?;
-    let curve_type = CURVE_TYPE.load(deps.storage)?;
     let curve_fn = curve_type.to_curve_fn();
-    let curve = curve_fn(state.clone().decimals);
-    let mut spot_price = curve.spot_price(state.supply);
+    let curve = curve_fn(curve_state.clone().decimals);
+    let mut spot_price = curve.spot_price(curve_state.supply);
 
     // quote denom must not equal base denom.
     if quote_asset_denom == base_asset_denom {
@@ -417,20 +442,23 @@ pub fn query_spot_price(
     }
 
     // one of the assets must be the reserve asset.
-    if quote_asset_denom != state.reserve_denom && base_asset_denom != state.reserve_denom {
+    if quote_asset_denom != curve_state.reserve_denom
+        && base_asset_denom != curve_state.reserve_denom
+    {
         return Err(ContractError::Std(StdError::generic_err(
             "one of the assets must be the reserve asset",
         )));
     }
 
     // one of the assets must be the supply asset
-    if quote_asset_denom != state.supply_denom && base_asset_denom != state.supply_denom {
+    if quote_asset_denom != curve_state.supply_denom && base_asset_denom != curve_state.supply_denom
+    {
         return Err(ContractError::Std(StdError::generic_err(
             "one of the assets must be the supply asset",
         )));
     }
 
-    if quote_asset_denom != state.reserve_denom {
+    if quote_asset_denom != curve_state.reserve_denom {
         spot_price = Decimal::one().checked_div(spot_price)?;
     }
 
@@ -443,9 +471,17 @@ pub fn query_calc_out_amt_given_in(
     token_in: Coin,
     token_out_denom: String,
     swap_fee: Decimal,
+    curve_state: CurveState,
+    curve_type: CurveType,
 ) -> Result<CalcOutAmtGivenInResponse, ContractError> {
-    let (token_out_amount, _state) =
-        calc_swap_exact_amount_in(deps, token_in, token_out_denom.clone(), swap_fee)?;
+    let (token_out_amount, _state) = calc_swap_exact_amount_in(
+        deps,
+        token_in,
+        token_out_denom.clone(),
+        swap_fee,
+        curve_state,
+        curve_type,
+    )?;
     Ok(CalcOutAmtGivenInResponse {
         token_out: coin(token_out_amount.u128(), token_out_denom),
     })
@@ -457,9 +493,17 @@ pub fn query_calc_in_amt_given_out(
     token_out: Coin,
     token_in_denom: String,
     swap_fee: Decimal,
+    curve_state: CurveState,
+    curve_type: CurveType,
 ) -> Result<CalcInAmtGivenOutResponse, ContractError> {
-    let (token_in_amount, _state) =
-        calc_swap_exact_amount_out(deps, token_in_denom.clone(), token_out, swap_fee)?;
+    let (token_in_amount, _state) = calc_swap_exact_amount_out(
+        deps,
+        token_in_denom.clone(),
+        token_out,
+        swap_fee,
+        curve_state,
+        curve_type,
+    )?;
     Ok(CalcInAmtGivenOutResponse {
         token_in: coin(token_in_amount.u128(), token_in_denom),
     })

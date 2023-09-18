@@ -1,7 +1,13 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Decimal, Uint128};
 
-use crate::curves::{decimal, Constant, Curve, DecimalPlaces, Linear, SquareRoot};
+use crate::{
+    curves::{
+        decimal, Constant, CubeRootSquared, Curve, DecimalPlaces, Linear, SquareRoot,
+        SquareRootCubed,
+    },
+    state::CurveState,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -24,12 +30,24 @@ pub struct InstantiateMsg {
     /// write a custom `instantiate`, and then dispatch `your::execute` -> `cw20_bonding::do_execute`
     /// with your custom curve as a parameter (and same with `query` -> `do_query`)
     pub curve_type: CurveType,
+
+    /// Enable if you want to test the contract without cosmwasmpool
+    pub test_mode: Option<bool>,
+
+    // Enable if you want to simulate the contract off-chain
+    pub simulation_mode: Option<bool>,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
     Dissolve {},
-    RegisterTokenFactorySupplyDenom { subdenom: String },
+    Sudo(SudoMsg),
+    Simulate(SimulationMsg),
+}
+
+#[cw_serde]
+pub enum SimulationMsg {
+    SetState { state: BondingPoolState },
 }
 
 #[cw_serde]
@@ -80,7 +98,20 @@ pub enum QueryMsg {
         token_in_denom: String,
         swap_fee: Decimal,
     },
+
+    // Non cosmwasmpool queries
+    #[returns(BondingPoolState)]
+    BondingPoolState {},
 }
+
+#[cw_serde]
+pub struct BondingPoolState {
+    pub curve_state: CurveState,
+    pub dissolved_curve_state: CurveState,
+    pub curve_type: CurveType,
+    pub is_active: bool,
+}
+
 #[cw_serde]
 pub struct GetSwapFeeResponse {
     pub swap_fee: Decimal,
@@ -215,6 +246,10 @@ pub enum CurveType {
     Linear { slope: Uint128, scale: u32 },
     /// SquareRoot returns `slope * 10^-scale * supply^0.5` as spot price
     SquareRoot { slope: Uint128, scale: u32 },
+    /// SquareRootCubed returns `f(x) = slope * ((x * 10^-scale)^(1/2))^3`
+    SquareRootCubed { slope: Uint128, scale: u32 },
+    /// CubeRootSquared returns `f(x) = slope * ((x * 10^-scale)^(1/3))^2`
+    CubeRootSquared { slope: Uint128, scale: u32 },
 }
 
 impl CurveType {
@@ -235,6 +270,18 @@ impl CurveType {
             CurveType::SquareRoot { slope, scale } => {
                 let calc = move |places| -> Box<dyn Curve> {
                     Box::new(SquareRoot::new(decimal(slope, scale), places))
+                };
+                Box::new(calc)
+            }
+            CurveType::SquareRootCubed { slope, scale } => {
+                let calc = move |places| -> Box<dyn Curve> {
+                    Box::new(SquareRootCubed::new(decimal(slope, scale), places))
+                };
+                Box::new(calc)
+            }
+            CurveType::CubeRootSquared { slope, scale } => {
+                let calc = move |places| -> Box<dyn Curve> {
+                    Box::new(CubeRootSquared::new(decimal(slope, scale), places))
                 };
                 Box::new(calc)
             }

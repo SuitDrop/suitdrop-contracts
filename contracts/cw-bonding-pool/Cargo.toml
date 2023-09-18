@@ -54,7 +54,7 @@ integer-sqrt = { workspace = true }
 integer-cbrt = { workspace = true }
 osmosis-std = { default-features = false, workspace = true }
 prost = { default-features = false, workspace = true }
-
+num-integer = "0.1.43"
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"

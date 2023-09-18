@@ -1,1 +1,4 @@
 name = "suitdrop-contracts"
+
+[wasm]
+optimizer_version = '0.13.0'

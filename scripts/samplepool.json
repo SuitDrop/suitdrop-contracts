@@ -1,0 +1,6 @@
+{
+  "weights": "1uosmo,1uion",
+  "initial-deposit": "1uosmo,1uion",
+  "swap-fee": "0.001",
+  "exit-fee": "0.000"
+}

@@ -1,0 +1,12 @@
+{
+  "title": "TokenFactory Param Change",
+  "description": "Update denom creation gas consume",
+  "changes": [
+    {
+      "subspace": "tokenfactory",
+      "key": "DenomCreationGasConsume",
+      "value": "100"
+    }
+  ],
+  "deposit": "100000000uosmo"
+}

@@ -1,0 +1,31 @@
+{
+  "body": {
+    "messages": [
+      {
+        "@type": "/cosmos.gov.v1beta1.MsgVote",
+        "proposal_id": "570",
+        "voter": "osmo1guv8ksw8tex87tr2n9tjfgeg2u640kv9u2dpat",
+        "option": "VOTE_OPTION_YES"
+      }
+    ],
+    "memo": "",
+    "timeout_height": "0",
+    "extension_options": [],
+    "non_critical_extension_options": []
+  },
+  "auth_info": {
+    "signer_infos": [],
+    "fee": {
+      "amount": [
+        {
+          "denom": "uosmo",
+          "amount": "12645"
+        }
+      ],
+      "gas_limit": "505768",
+      "payer": "",
+      "granter": ""
+    }
+  },
+  "signatures": []
+}
