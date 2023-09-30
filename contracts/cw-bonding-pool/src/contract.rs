@@ -1,13 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, coins, ensure, to_binary, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps,
-    DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, Uint128,
+    coin, coins, ensure, to_binary, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Reply, Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_utils::{must_pay, one_coin};
 
-use crate::calc::{calc_buy_exact_out, calc_swap_exact_amount_in, calc_swap_exact_amount_out};
+use crate::calc::{
+    calc_buy_exact_out, calc_spot_price, calc_swap_exact_amount_in, calc_swap_exact_amount_out,
+};
 use crate::curves::DecimalPlaces;
 use crate::error::ContractError;
 use crate::helpers::mint_or_send;
@@ -23,7 +25,6 @@ use crate::state::{
 };
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
 
-
 // version info for migration info
 pub const CONTRACT_NAME: &str = "crates.io:cw-bonding-pool";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -38,11 +39,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let supply_denom = format!(
-        "factory/{}/{}",
-        env.contract.address,
-        msg.supply_subdenom
-    );
+    let supply_denom = format!("factory/{}/{}", env.contract.address, msg.supply_subdenom);
     let places = DecimalPlaces::new(msg.supply_decimals, msg.reserve_decimals);
     let supply = CurveState::new(msg.reserve_denom, supply_denom, places);
 
@@ -247,7 +244,6 @@ pub fn execute_swap_exact_amount_in(
     swap_fee: Decimal,
 ) -> Result<Response, ContractError> {
     let (token_out_amount, curve) = calc_swap_exact_amount_in(
-        deps.as_ref(),
         token_in,
         token_out_denom.clone(),
         swap_fee,
@@ -293,7 +289,6 @@ pub fn execute_swap_exact_amount_out(
     swap_fee: Decimal,
 ) -> Result<Response, ContractError> {
     let (token_in_amount, state) = calc_swap_exact_amount_out(
-        deps.as_ref(),
         token_in_denom,
         token_out.clone(),
         swap_fee,
@@ -430,38 +425,7 @@ pub fn query_spot_price(
     curve_state: CurveState,
     curve_type: CurveType,
 ) -> Result<SpotPriceResponse, ContractError> {
-    let curve_fn = curve_type.to_curve_fn();
-    let curve = curve_fn(curve_state.clone().decimals);
-    let mut spot_price = curve.spot_price(curve_state.supply);
-
-    // quote denom must not equal base denom.
-    if quote_asset_denom == base_asset_denom {
-        return Err(ContractError::Std(StdError::generic_err(
-            "quote denom must not equal base denom",
-        )));
-    }
-
-    // one of the assets must be the reserve asset.
-    if quote_asset_denom != curve_state.reserve_denom
-        && base_asset_denom != curve_state.reserve_denom
-    {
-        return Err(ContractError::Std(StdError::generic_err(
-            "one of the assets must be the reserve asset",
-        )));
-    }
-
-    // one of the assets must be the supply asset
-    if quote_asset_denom != curve_state.supply_denom && base_asset_denom != curve_state.supply_denom
-    {
-        return Err(ContractError::Std(StdError::generic_err(
-            "one of the assets must be the supply asset",
-        )));
-    }
-
-    if quote_asset_denom != curve_state.reserve_denom {
-        spot_price = Decimal::one().checked_div(spot_price)?;
-    }
-
+    let spot_price = calc_spot_price(quote_asset_denom, base_asset_denom, curve_state, curve_type)?;
     Ok(SpotPriceResponse { spot_price })
 }
 
@@ -475,7 +439,6 @@ pub fn query_calc_out_amt_given_in(
     curve_type: CurveType,
 ) -> Result<CalcOutAmtGivenInResponse, ContractError> {
     let (token_out_amount, _state) = calc_swap_exact_amount_in(
-        deps,
         token_in,
         token_out_denom.clone(),
         swap_fee,
@@ -497,7 +460,6 @@ pub fn query_calc_in_amt_given_out(
     curve_type: CurveType,
 ) -> Result<CalcInAmtGivenOutResponse, ContractError> {
     let (token_in_amount, _state) = calc_swap_exact_amount_out(
-        deps,
         token_in_denom.clone(),
         token_out,
         swap_fee,

@@ -1,3 +1,7 @@
+use cw_bonding_pool::calc::{
+    CalcSpotPriceRequest, CalcSwapExactAmountInRequest, CalcSwapExactAmountOutRequest,
+    GetTokenInByTokenOutRequest, GetTokenOutByTokenInRequest,
+};
 use wasm_bindgen::prelude::*;
 mod utils;
 
@@ -10,11 +14,51 @@ mod utils;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
+pub fn calc_swap_exact_amount_in(val: JsValue) -> Result<JsValue, JsValue> {
+    let request: CalcSwapExactAmountInRequest = serde_wasm_bindgen::from_value(val)?;
+    let response = request
+        .execute()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    /* …do something with `example`… */
+    Ok(serde_wasm_bindgen::to_value(&response)?)
 }
 
 #[wasm_bindgen]
-pub fn greet() {
-    unsafe { alert("Hello, test-wasm!") };
+pub fn calc_swap_exact_amount_out(val: JsValue) -> Result<JsValue, JsValue> {
+    let request: CalcSwapExactAmountOutRequest = serde_wasm_bindgen::from_value(val)?;
+    let response = request
+        .execute()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    /* …do something with `example`… */
+    Ok(serde_wasm_bindgen::to_value(&response)?)
+}
+
+#[wasm_bindgen]
+pub fn calc_spot_price(val: JsValue) -> Result<JsValue, JsValue> {
+    let request: CalcSpotPriceRequest = serde_wasm_bindgen::from_value(val)?;
+    let response = request
+        .execute()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    /* …do something with `example`… */
+    Ok(serde_wasm_bindgen::to_value(&response)?)
+}
+
+#[wasm_bindgen]
+pub fn calc_get_token_in_by_token_out(val: JsValue) -> Result<JsValue, JsValue> {
+    let request: GetTokenInByTokenOutRequest = serde_wasm_bindgen::from_value(val)?;
+    let response = request
+        .execute()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    /* …do something with `example`… */
+    Ok(serde_wasm_bindgen::to_value(&response)?)
+}
+
+#[wasm_bindgen]
+pub fn calc_get_token_out_by_token_in(val: JsValue) -> Result<JsValue, JsValue> {
+    let request: GetTokenOutByTokenInRequest = serde_wasm_bindgen::from_value(val)?;
+    let response = request
+        .execute()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    /* …do something with `example`… */
+    Ok(serde_wasm_bindgen::to_value(&response)?)
 }
