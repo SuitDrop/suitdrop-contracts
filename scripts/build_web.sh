@@ -1,1 +1,1 @@
-wasm-pack build ./packages/bonding-pool-bindings --target web
+wasm-pack build ./packages/bonding-pool-bindings --target bundler
